@@ -1,0 +1,2 @@
+flake8
+git+https://github.com/pnsn/squacapi_client.git@v1.0
