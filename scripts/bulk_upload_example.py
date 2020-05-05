@@ -64,7 +64,10 @@ for ckey in channel_keys:
     for mkey in metric_keys:
         metric = metric_map[mkey]
         channel = channel_map[ckey]
-        # Create a WriteOnlyMeasurmentSerializer for each measurment
+        '''Create a WriteOnlyMeasurmentSerializer for each measurment
+           in practice, the mkey and ckey will be derived from your data.
+        '''
+
         measurement = WriteOnlyMeasurementSerializer(
             metric=metric_map[mkey],
             channel=channel_map[ckey],
@@ -79,6 +82,6 @@ for ckey in channel_keys:
 response, errors = perform_bulk_create(measurements, client,
                                        chunk=WRITE_CHUNK)
 
-# ''' do something with the errors: log, email ...'''
+''' do something with the errors: log, email ...'''
 for error in errors:
     print(error[0], error[1])
