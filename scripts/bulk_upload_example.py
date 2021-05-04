@@ -2,7 +2,7 @@
 
 ''' example script to bulk upload measurements'''
 
-import datetime
+from datetime import datetime, timedelta
 import sys
 import os
 
@@ -15,42 +15,40 @@ from squacapi_client.pnsn_utilities \
 # how many measurements to post per request
 WRITE_CHUNK = 20
 
-# LOCAL, STAGING, PRODUCTION
-ENVIRONMENT = 'LOCAL'
-
 try:
     USER = os.environ['SQUACAPI_USER']
     PASSWORD = os.environ['SQUACAPI_PASSWD']
-    HOST = os.environ[ENVIRONMENT + '_HOST']
 
 except KeyError:
     sys.exit("Requires ENV vars SQUACAPI_USER, SQUACAPI_PASSWD and HOST")
 
 # create API client
-client = get_client(USER, PASSWORD, HOST)
+client = get_client(USER, PASSWORD)
 
 '''retrieve all metrics. Use params to filter:
     example: client.v1_0_measurement_metrics_list(name='some_metric')
 '''
-metrics = client.v1_0_measurement_metrics_list(name='packet_length_sniff')
+metrics = client.v1_0_measurement_metrics_list(name='rawrms')
 
 '''retrieve all channels. Use params to filter:
     example:
     client.v1_0_measurement_channels_list(network='cc',channel=hhz,bhz)
 '''
-channels = client.v1_0_nslc_channels_list(network='cc', channel='ehz')
-
+channels = client.v1_0_nslc_channels_list(network='uw', channel='hnn')
+ 
 # # create lookup maps for fk relation
 metric_map = make_metric_map(metrics)
 channel_map = make_channel_map(channels)
 
 # TEST DATA
 ################
-now = datetime.datetime.utcnow()
-starttime = datetime.datetime(now.year, now.month, now.day, 0, 0, 0)
-endtime = datetime.datetime(now.year, now.month, now.day, 1, 0, 0)
+now = datetime.utcnow()
+starttime = datetime(now.year, now.month, now.day, 0, 0, 0)
+starttime = starttime - timedelta(days=365)
+endtime = datetime(now.year, now.month, now.day, 1, 0, 0)
+endtime = endtime - timedelta(days=365)
 
-# Keys for creating test data. 
+# Keys for creating test data.
 metric_keys = list(metric_map.keys())
 channel_keys = list(channel_map.keys())
 
@@ -61,6 +59,7 @@ channel_keys = list(channel_map.keys())
 # create a test collection of measurements for bulk uploading
 measurements = []
 for ckey in channel_keys:
+    print(ckey)
     for mkey in metric_keys:
         metric = metric_map[mkey]
         channel = channel_map[ckey]
@@ -71,7 +70,7 @@ for ckey in channel_keys:
         measurement = WriteOnlyMeasurementSerializer(
             metric=metric_map[mkey],
             channel=channel_map[ckey],
-            value=1.0,
+            value=7.5,
             starttime=starttime,
             endtime=endtime
         )
@@ -81,7 +80,12 @@ for ckey in channel_keys:
     update in 'chunks' '''
 response, errors = perform_bulk_create(measurements, client,
                                        chunk=WRITE_CHUNK)
-
-''' do something with the errors: log, email ...'''
+# example of error response
 for error in errors:
-    print(error[0], error[1])
+    error_str = (
+        f"Reason: {error['reason']}\n"
+        f"Error: {error['body']}\n"
+        f"HTTPStatus: {error['status']}\n"
+        f"Headers: {error['headers']}"
+    )
+    print(error_str)
